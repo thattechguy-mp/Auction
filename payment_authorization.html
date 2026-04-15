@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aldine Storage Payment Authorization Form</title>
+  <style>
+    :root{
+      --rm-blue:#00A1FB;
+      --rm-blue-dark:#5E85C4;
+      --rm-green:#89F895;
+      --hero-end:#241f51;
+      --ink:#101828;
+      --muted:#667085;
+      --line:#d0d5dd;
+      --bg:#eef2f7;
+      --panel:#ffffff;
+      --danger:#b42318;
+      --orange:#fb923c;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,#eef2f7 0%,#f8fafc 100%);color:var(--ink)}
+    .shell{max-width:980px;margin:0 auto;padding:22px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 10px 30px rgba(16,24,40,.08)}
+    .hero{padding:26px 24px;background:linear-gradient(135deg,var(--rm-blue) 0%,var(--rm-blue-dark) 52%,var(--hero-end) 100%);color:#fff}
+    .hero img{max-width:190px;height:auto;display:block;border:0}
+    .badge{display:inline-block;margin-top:14px;background:var(--rm-green);color:#102a43;font-size:12px;font-weight:700;padding:8px 14px;border-radius:999px;letter-spacing:.3px;text-transform:uppercase}
+    .hero h1{margin:12px 0 8px;font-size:34px;line-height:1.08}
+    .hero p{margin:0;max-width:760px;font-size:16px;line-height:1.7;color:#eff6ff}
+    .content{padding:24px}
+    .notice{background:#fff7ed;border:1px solid #fed7aa;border-left:5px solid var(--orange);padding:16px 18px;border-radius:12px;font-size:15px;line-height:1.7;color:#344054;margin-bottom:20px}
+    .section{margin:24px 0 8px;font-size:14px;font-weight:700;color:#21406f;display:flex;align-items:center;gap:10px}
+    .section::before{content:"";width:12px;height:12px;border-radius:999px;background:linear-gradient(135deg,var(--rm-green),var(--rm-blue));box-shadow:0 0 0 4px rgba(0,161,251,.1)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .full{grid-column:1/-1}
+    .thirds{display:grid;grid-template-columns:1.3fr .7fr .7fr .8fr;gap:12px}
+    label{display:block;font-size:14px;font-weight:700;margin:0 0 8px;color:#344054}
+    input,select,textarea{width:100%;padding:14px 14px;border:1px solid var(--line);border-radius:12px;font-size:16px;background:#fff;color:var(--ink)}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:var(--rm-blue);box-shadow:0 0 0 4px rgba(0,161,251,.12)}
+    textarea{min-height:100px;resize:vertical}
+    .help{font-size:12px;color:var(--muted);line-height:1.6;margin-top:6px}
+    .actions{display:flex;gap:12px;align-items:center;justify-content:flex-end;margin-top:20px;flex-wrap:wrap}
+    button{border:0;border-radius:12px;padding:15px 22px;font-size:16px;font-weight:700;cursor:pointer}
+    .btn-secondary{background:#e5e7eb;color:#111827}
+    .btn-primary{background:var(--rm-blue);color:#fff;box-shadow:0 8px 18px rgba(0,161,251,.25)}
+    .legal{font-size:12px;line-height:1.75;color:#667085;padding:18px 24px 24px;border-top:1px solid #eaecf0;background:#fcfcfd}
+    .legal strong{color:#344054}
+    .footer{margin-top:16px;text-align:center;font-size:12px;color:#667085;line-height:1.8}
+    .footer-logo{display:block;margin:8px auto 0;height:28px;width:auto}
+    .status{display:none;margin-top:18px;padding:14px 16px;border-radius:12px;font-size:14px;line-height:1.6}
+    .status.ok{display:block;background:#ecfdf3;border:1px solid #abefc6;color:#027a48}
+    .status.err{display:block;background:#fef3f2;border:1px solid #fecdca;color:#b42318}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.65);display:none;align-items:center;justify-content:center;padding:18px;z-index:9999}
+    .modal{max-width:520px;width:100%;background:#fff;border-radius:18px;border:1px solid #d0d5dd;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden}
+    .modal-head{padding:20px 22px;background:linear-gradient(135deg,var(--rm-blue) 0%,var(--rm-blue-dark) 58%,var(--hero-end) 100%);color:#fff}
+    .modal-body{padding:22px;color:#344054;font-size:15px;line-height:1.75}
+    .modal-actions{display:flex;justify-content:flex-end;gap:12px;padding:0 22px 22px}
+    .req{color:var(--danger)}
+    .check-row{display:flex;gap:10px;align-items:flex-start;padding:14px;border:1px solid #d0d5dd;border-radius:12px;background:#fcfcfd}
+    .check-row input[type="checkbox"]{width:auto;margin-top:3px;transform:scale(1.15)}
+    .check-row label{margin:0;font-weight:400;line-height:1.7}
+    .signature-pad-wrap{border:1px solid var(--line);border-radius:14px;padding:14px;background:#f8fafc}
+    .signature-pad{width:100%;height:210px;background:#fff;border:1px dashed #98a2b3;border-radius:12px;touch-action:none;display:block}
+    .sig-actions{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap}
+    .sig-note{font-size:12px;color:var(--muted);line-height:1.6}
+    .inline-prefix{display:flex;align-items:center;gap:10px}
+    .inline-prefix span{white-space:nowrap;font-weight:700;color:#344054}
+    .hidden{display:none!important}
+    @media (max-width:860px){.grid,.thirds{grid-template-columns:1fr}.actions{justify-content:stretch}.actions button{width:100%}.hero h1{font-size:28px}}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="card">
+      <div class="hero">
+        <img src="https://res.cloudinary.com/aldine/image/upload/v1663433242/Right_Move_logo_9-1-2022_.png" alt="Right Move Storage">
+        <div class="badge">Aldine Storage - Payment Request</div>
+        <h1>Payment Authorization Form</h1>
+        <p>Use this form only when you are ready to make a payment. After you submit, the office will receive your request and contact you to complete the payment process.</p>
+      </div>
+
+      <div class="content">
+        <div class="notice">
+          By continuing, you confirm that you are ready for the office to contact you to complete payment. If you are not ready to make a payment, do not submit this request.
+        </div>
+
+        <form id="paymentForm">
+          <div class="grid">
+            <div>
+              <label for="fullName">Full Name <span class="req">*</span></label>
+              <input id="fullName" name="fullName" type="text" autocomplete="name" required>
+            </div>
+            <div>
+              <label for="email">Your Email <span class="req">*</span></label>
+              <input id="email" name="email" type="email" autocomplete="email" required>
+            </div>
+            <div>
+              <label for="mobileNumber">Mobile Number <span class="req">*</span></label>
+              <input id="mobileNumber" name="mobileNumber" type="tel" autocomplete="tel" required>
+            </div>
+            <div>
+              <label for="unitNumber">Select Unit Number <span class="req">*</span></label>
+              <select id="unitNumber" name="unitNumber" required></select>
+            </div>
+
+            <div class="full">
+              <label>Tenant Physical Address <span class="req">*</span></label>
+              <div class="thirds">
+                <div>
+                  <input id="physicalStreet" name="physicalStreet" type="text" placeholder="Street Address" autocomplete="address-line1" required>
+                </div>
+                <div>
+                  <input id="physicalCity" name="physicalCity" type="text" placeholder="City" autocomplete="address-level2" required>
+                </div>
+                <div>
+                  <select id="physicalState" name="physicalState" autocomplete="address-level1" required></select>
+                </div>
+                <div>
+                  <input id="physicalZip" name="physicalZip" type="text" inputmode="numeric" maxlength="10" placeholder="ZIP" autocomplete="postal-code" required>
+                </div>
+              </div>
+              <div class="help">Structured address checks validate completeness and basic U.S. state / ZIP formatting.</div>
+            </div>
+
+            <div>
+              <label for="amount">Amount to Pay <span class="req">*</span></label>
+              <input id="amount" name="amount" type="text" inputmode="decimal" placeholder="0.00" required>
+            </div>
+
+            <div class="full section">Card information</div>
+
+            <div>
+              <label for="cardholderName">Cardholder Name <span class="req">*</span></label>
+              <input id="cardholderName" name="cardholderName" type="text" required>
+            </div>
+            <div>
+              <label for="cardBrand">Card Brand <span class="req">*</span></label>
+              <select id="cardBrand" name="cardBrand" required>
+                <option value="">Select card brand</option>
+                <option>Visa</option>
+                <option>Mastercard</option>
+                <option>American Express</option>
+                <option>Discover</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div>
+              <label for="cardNumber">Card Number <span class="req">*</span></label>
+              <input id="cardNumber" name="cardNumber" type="text" inputmode="numeric" autocomplete="cc-number" placeholder="1234 5678 9012 3456" required>
+              <div class="help">Numbers only. Spaces are allowed and will be cleaned automatically.</div>
+            </div>
+            <div>
+              <label for="expirationDate">Expiration Date (MM/YY) <span class="req">*</span></label>
+              <input id="expirationDate" name="expirationDate" type="text" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/YY" maxlength="5" required>
+            </div>
+            <div>
+              <label for="cvv">Security Code (CVV) <span class="req">*</span></label>
+              <input id="cvv" name="cvv" type="text" inputmode="numeric" autocomplete="cc-csc" maxlength="4" required>
+              <div class="help">Entered for payment authorization handling.</div>
+            </div>
+            <div>
+              <label for="lastFour">Last 4 Digits <span class="req">*</span></label>
+              <input id="lastFour" name="lastFour" type="text" inputmode="numeric" maxlength="4" required>
+            </div>
+
+            <div class="full">
+              <div class="check-row">
+                <input id="billingIsPoBox" name="billingIsPoBox" type="checkbox" value="Yes">
+                <label for="billingIsPoBox">My billing address is a PO Box.</label>
+              </div>
+            </div>
+
+            <div class="full" id="billingStreetWrap">
+              <label for="billingStreet">Card Billing Address <span class="req">*</span></label>
+              <input id="billingStreet" name="billingStreet" type="text" placeholder="Example: 1234 Anywhere St" autocomplete="address-line1" required>
+            </div>
+
+            <div class="full hidden" id="poBoxWrap">
+              <label for="poBoxNumber">Billing PO Box Number <span class="req">*</span></label>
+              <div class="inline-prefix">
+                <span>PO BOX</span>
+                <input id="poBoxNumber" name="poBoxNumber" type="text" inputmode="numeric" placeholder="Enter box number">
+              </div>
+            </div>
+
+            <div>
+              <label for="billingCity">Billing City <span class="req">*</span></label>
+              <input id="billingCity" name="billingCity" type="text" autocomplete="billing address-level2" required>
+            </div>
+            <div>
+              <label for="billingState">Billing State <span class="req">*</span></label>
+              <select id="billingState" name="billingState" autocomplete="billing address-level1" required></select>
+            </div>
+            <div>
+              <label for="billingZip">Billing ZIP <span class="req">*</span></label>
+              <input id="billingZip" name="billingZip" type="text" inputmode="numeric" maxlength="10" autocomplete="billing postal-code" placeholder="ZIP" required>
+            </div>
+            <div>
+              <label for="preferredCallback">Preferred Call Back Window <span class="req">*</span></label>
+              <select id="preferredCallback" name="preferredCallback" required>
+                <option value="">Select a call back window</option>
+                <option>As soon as possible</option>
+                <option>Today - Morning</option>
+                <option>Today - Afternoon</option>
+                <option>Today - Before Closing</option>
+                <option>Tomorrow - Morning</option>
+                <option>Tomorrow - Afternoon</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="noticeDate">Notice Date <span class="req">*</span></label>
+              <input id="noticeDate" name="noticeDate" type="date" required>
+            </div>
+
+            <div class="full section">Signature authorization</div>
+
+            <div class="full">
+              <div class="notice" style="margin-bottom:0;background:#f8fbff;border-color:#cfe7f8;border-left-color:var(--rm-blue)">
+                <strong>Important legal and processing notice:</strong> By signing and submitting this form, you authorize Aldine Storage / Right Move Storage to use the card information entered above to process the amount you approved for your storage account. This authorization may be retained and used for payment review, dispute response, chargeback response, collection support, or internal account verification.
+              </div>
+            </div>
+
+            <div class="full">
+              <label>Draw Signature <span class="req">*</span></label>
+              <div class="signature-pad-wrap">
+                <canvas id="signaturePad" class="signature-pad"></canvas>
+                <input type="hidden" id="drawnSignature" name="drawnSignature">
+                <div class="sig-actions">
+                  <div class="sig-note">Sign above, then type your full legal name below.</div>
+                  <button type="button" class="btn-secondary" id="clearSignature">Clear Signature</button>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label for="signature">Type Full Legal Name <span class="req">*</span></label>
+              <input id="signature" name="signature" type="text" required placeholder="Type full legal name">
+            </div>
+            <div>
+              <label for="signatureDate">Signature Date <span class="req">*</span></label>
+              <input id="signatureDate" name="signatureDate" type="date" required>
+            </div>
+
+            <div class="full">
+              <div class="check-row">
+                <input id="readyAuthorization" name="readyAuthorization" type="checkbox" value="Yes" required>
+                <label for="readyAuthorization">I am ready to make a payment and want Aldine Storage to contact me to complete the payment process.</label>
+              </div>
+            </div>
+
+            <div class="full">
+              <div class="check-row">
+                <input id="cardAuthorization" name="cardAuthorization" type="checkbox" value="Yes" required>
+                <label for="cardAuthorization" id="cardAuthorizationLabel">I authorize Aldine Storage to process a payment with the card type entered above, ending in ****, in the amount of $0.00.</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="reset" class="btn-secondary">Clear Form</button>
+            <button type="submit" class="btn-primary">Send Payment Authorization Request</button>
+          </div>
+        </form>
+
+        <div id="status" class="status"></div>
+      </div>
+
+      <div class="legal">
+        <strong>Payment and card notice:</strong> This request form is intended for payment authorization processing. By submitting, you certify that you are authorized to use the card identified on this form, that the amount entered is authorized by you, and that Aldine Storage may process or follow up on the payment using approved office procedures. Address checks on this page are formatting and completeness checks only and are not a guarantee of postal deliverability.
+      </div>
+    </div>
+
+    <div class="footer">
+      Aldine Storage | 21667 Aldine Westfield Rd, Humble, TX 77338<br>
+      Phone: (281) 233-0400 | Email: aldine@rightmovestorage.com<br>
+      www.rightmovestorage.com<br><br>
+      © 2026 Right Move Storage. Form created, developed, and maintained by That Tech Guy.
+      <img class="footer-logo" alt="That Tech Guy" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='40' viewBox='0 0 160 40'><rect rx='8' ry='8' width='160' height='40' fill='%23111827'/><text x='80' y='16' text-anchor='middle' font-family='Arial,Helvetica,sans-serif' font-size='12' fill='%2389F895' font-weight='700'>THAT TECH GUY</text><text x='80' y='29' text-anchor='middle' font-family='Arial,Helvetica,sans-serif' font-size='8' fill='%23ffffff'>WEB • CODE • AUTOMATION</text></svg>">
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="confirmModal">
+    <div class="modal">
+      <div class="modal-head">
+        <strong>Ready to send?</strong>
+      </div>
+      <div class="modal-body">
+        This request should only be sent when you are ready to make a payment. After submission, the office will contact you to complete the payment. If you are not ready right now, choose <strong>Cancel</strong>.
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="cancelSend">Cancel</button>
+        <button type="button" class="btn-primary" id="confirmSend">Yes, Send Request</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const WEB_APP_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+    const UNAVAILABLE_UNITS = ['00143','00144','00145','00199','00258','00309','00320','00357','00378','00556'];
+    const STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
+    const unitSelect = document.getElementById('unitNumber');
+    const form = document.getElementById('paymentForm');
+    const statusBox = document.getElementById('status');
+    const modal = document.getElementById('confirmModal');
+    const cancelSend = document.getElementById('cancelSend');
+    const confirmSend = document.getElementById('confirmSend');
+    const amountInput = document.getElementById('amount');
+    const lastFourInput = document.getElementById('lastFour');
+    const cardBrandInput = document.getElementById('cardBrand');
+    const cardNumberInput = document.getElementById('cardNumber');
+    const expInput = document.getElementById('expirationDate');
+    const cvvInput = document.getElementById('cvv');
+    const cardAuthorizationLabel = document.getElementById('cardAuthorizationLabel');
+    const billingIsPoBox = document.getElementById('billingIsPoBox');
+    const billingStreet = document.getElementById('billingStreet');
+    const poBoxNumber = document.getElementById('poBoxNumber');
+    const billingStreetWrap = document.getElementById('billingStreetWrap');
+    const poBoxWrap = document.getElementById('poBoxWrap');
+    let pendingPayload = null;
+
+    const canvas = document.getElementById('signaturePad');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    let hasSignature = false;
+
+    function resizeCanvas() {
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * ratio;
+      canvas.height = rect.height * ratio;
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#111827';
+      if (!hasSignature) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function buildOptions(select, placeholder) {
+      let html = `<option value="">${placeholder}</option>`;
+      STATES.forEach(state => html += `<option value="${state}">${state}</option>`);
+      select.innerHTML = html;
+    }
+
+    function buildUnitOptions() {
+      let html = '<option value="">Select your unit</option>';
+      for (let i = 1; i <= 622; i++) {
+        const value = String(i).padStart(5, '0');
+        if (UNAVAILABLE_UNITS.includes(value)) continue;
+        html += `<option value="${value}">${value}</option>`;
+      }
+      unitSelect.innerHTML = html;
+    }
+
+    function showStatus(type, msg) {
+      if (!msg) {
+        statusBox.className = 'status';
+        statusBox.textContent = '';
+        return;
+      }
+      statusBox.className = 'status ' + type;
+      statusBox.textContent = msg;
+    }
+
+    function formatAmountValue(value) {
+      let clean = value.replace(/[^
+\d.]/g, '');
+      const parts = clean.split('.');
+      if (parts.length > 2) clean = parts[0] + '.' + parts.slice(1).join('');
+      return clean;
+    }
+
+    function formatCardNumber(value) {
+      return value.replace(/\D/g, '').slice(0,19).replace(/(.{4})/g, '$1 ').trim();
+    }
+
+    function updateLastFourFromCard() {
+      const digits = cardNumberInput.value.replace(/\D/g, '');
+      if (digits.length >= 4) lastFourInput.value = digits.slice(-4);
+      updateAuthorizationLabel();
+    }
+
+    function updateAuthorizationLabel() {
+      const brand = cardBrandInput.value || 'card';
+      const last4 = /^\d{4}$/.test(lastFourInput.value) ? lastFourInput.value : '****';
+      const amount = /^\d+(\.\d{2})$/.test(amountInput.value) ? amountInput.value : '0.00';
+      cardAuthorizationLabel.textContent = `I authorize Aldine Storage to process a payment with the ${brand} entered above, ending in ${last4}, in the amount of $${amount}.`;
+    }
+
+    function togglePoBox() {
+      const isPo = billingIsPoBox.checked;
+      billingStreetWrap.classList.toggle('hidden', isPo);
+      poBoxWrap.classList.toggle('hidden', !isPo);
+      billingStreet.required = !isPo;
+      poBoxNumber.required = isPo;
+      if (isPo) billingStreet.value = ''; else poBoxNumber.value = '';
+    }
+
+    function zipValid(value) { return /^\d{5}(?:-\d{4})?$/.test(value); }
+    function expValid(value) { return /^(0[1-9]|1[0-2])\/\d{2}$/.test(value); }
+
+    function collectPayload() {
+      const fd = new FormData(form);
+      const payload = Object.fromEntries(fd.entries());
+      payload.drawnSignature = hasSignature ? canvas.toDataURL('image/png') : '';
+      payload.billingAddressType = billingIsPoBox.checked ? 'PO Box' : 'Street';
+      payload.cardNumberClean = (payload.cardNumber || '').replace(/\D/g, '');
+      payload.billingAddressFull = billingIsPoBox.checked
+        ? `PO BOX ${poBoxNumber.value.trim()}, ${payload.billingCity}, ${payload.billingState} ${payload.billingZip}`
+        : `${payload.billingStreet}, ${payload.billingCity}, ${payload.billingState} ${payload.billingZip}`;
+      payload.tenantPhysicalAddressFull = `${payload.physicalStreet}, ${payload.physicalCity}, ${payload.physicalState} ${payload.physicalZip}`;
+      return payload;
+    }
+
+    function validateClient(data) {
+      if (!/^\d+(\.\d{2})$/.test(data.amount)) return 'Amount must be entered like 100.00';
+      if (!/^\d{4}$/.test(data.lastFour)) return 'Last 4 digits must be exactly 4 numbers.';
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return 'Please enter a valid email address.';
+      if (!/^\d{5}$/.test(data.unitNumber)) return 'Please select a valid unit number.';
+      if (!zipValid(data.physicalZip)) return 'Please enter a valid ZIP for the tenant physical address.';
+      if (!zipValid(data.billingZip)) return 'Please enter a valid ZIP for the billing address.';
+      if (!STATES.includes(data.physicalState)) return 'Please select a valid physical address state.';
+      if (!STATES.includes(data.billingState)) return 'Please select a valid billing address state.';
+      if (!data.drawnSignature) return 'Please draw your signature before submitting.';
+      if (!/^\d{13,19}$/.test(data.cardNumberClean)) return 'Please enter a valid card number.';
+      if (!expValid(data.expirationDate)) return 'Expiration date must be in MM/YY format.';
+      if (!/^\d{3,4}$/.test(data.cvv)) return 'CVV must be 3 or 4 digits.';
+      if (billingIsPoBox.checked && !/^\d+[A-Za-z0-9-]*$/.test((data.poBoxNumber || '').trim())) return 'Please enter a valid PO Box number.';
+      if (!billingIsPoBox.checked && !(data.billingStreet || '').trim()) return 'Please enter the billing street address.';
+      return '';
+    }
+
+    function startDraw(x, y) { drawing = true; ctx.beginPath(); ctx.moveTo(x, y); }
+    function draw(x, y) { if (!drawing) return; ctx.lineTo(x, y); ctx.stroke(); hasSignature = true; }
+    function endDraw() { drawing = false; }
+    function pointFromEvent(e) {
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches && e.touches[0]) return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    async function sendPayload(payload) {
+      showStatus('', '');
+      try {
+        const response = await fetch(WEB_APP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (!result.ok) throw new Error(result.error || 'Submission failed.');
+        showStatus('ok', `Request sent successfully. Confirmation ID: ${result.confirmationId}. A PDF copy has been emailed to you.`);
+        form.reset();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        hasSignature = false;
+        togglePoBox();
+        updateAuthorizationLabel();
+        document.getElementById('noticeDate').valueAsDate = new Date();
+        document.getElementById('signatureDate').valueAsDate = new Date();
+      } catch (err) {
+        showStatus('err', err.message || 'Submission failed.');
+      }
+    }
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const payload = collectPayload();
+      const issue = validateClient(payload);
+      if (issue) { showStatus('err', issue); return; }
+      pendingPayload = payload;
+      modal.style.display = 'flex';
+    });
+
+    cancelSend.addEventListener('click', function() {
+      pendingPayload = null;
+      modal.style.display = 'none';
+      showStatus('err', 'Submission cancelled. Send the request only when you are ready to make a payment.');
+    });
+
+    confirmSend.addEventListener('click', function() {
+      modal.style.display = 'none';
+      if (pendingPayload) sendPayload(pendingPayload);
+      pendingPayload = null;
+    });
+
+    window.addEventListener('click', function(e) {
+      if (e.target === modal) { pendingPayload = null; modal.style.display = 'none'; }
+    });
+
+    amountInput.addEventListener('input', function() { this.value = formatAmountValue(this.value); updateAuthorizationLabel(); });
+    lastFourInput.addEventListener('input', function() { this.value = this.value.replace(/\D/g, '').slice(0,4); updateAuthorizationLabel(); });
+    cardBrandInput.addEventListener('change', updateAuthorizationLabel);
+    billingIsPoBox.addEventListener('change', togglePoBox);
+    cardNumberInput.addEventListener('input', function() { this.value = formatCardNumber(this.value); updateLastFourFromCard(); });
+    expInput.addEventListener('input', function(){
+      let v = this.value.replace(/\D/g,'').slice(0,4);
+      if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
+      this.value = v;
+    });
+    cvvInput.addEventListener('input', function(){ this.value = this.value.replace(/\D/g,'').slice(0,4); });
+
+    document.getElementById('physicalZip').addEventListener('input', function(){ this.value = this.value.replace(/[^\d-]/g, '').slice(0,10); });
+    document.getElementById('billingZip').addEventListener('input', function(){ this.value = this.value.replace(/[^\d-]/g, '').slice(0,10); });
+    document.getElementById('poBoxNumber').addEventListener('input', function(){ this.value = this.value.replace(/[^\w-]/g, ''); });
+    document.getElementById('clearSignature').addEventListener('click', function(){ ctx.clearRect(0, 0, canvas.width, canvas.height); hasSignature = false; });
+
+    canvas.addEventListener('mousedown', function(e){ const p = pointFromEvent(e); startDraw(p.x,p.y); });
+    canvas.addEventListener('mousemove', function(e){ const p = pointFromEvent(e); draw(p.x,p.y); });
+    window.addEventListener('mouseup', endDraw);
+    canvas.addEventListener('mouseleave', endDraw);
+    canvas.addEventListener('touchstart', function(e){ e.preventDefault(); const p = pointFromEvent(e); startDraw(p.x,p.y); }, {passive:false});
+    canvas.addEventListener('touchmove', function(e){ e.preventDefault(); const p = pointFromEvent(e); draw(p.x,p.y); }, {passive:false});
+    canvas.addEventListener('touchend', function(e){ e.preventDefault(); endDraw(); }, {passive:false});
+
+    buildUnitOptions();
+    buildOptions(document.getElementById('physicalState'), 'State');
+    buildOptions(document.getElementById('billingState'), 'State');
+    togglePoBox();
+    updateAuthorizationLabel();
+    document.getElementById('noticeDate').valueAsDate = new Date();
+    document.getElementById('signatureDate').valueAsDate = new Date();
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+  </script>
+</body>
+</html>
