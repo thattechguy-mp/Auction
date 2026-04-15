@@ -363,8 +363,7 @@
     }
 
     function formatAmountValue(value) {
-      let clean = value.replace(/[^
-\d.]/g, '');
+      let clean = value.replace(/[^\d.]/g, '');
       const parts = clean.split('.');
       if (parts.length > 2) clean = parts[0] + '.' + parts.slice(1).join('');
       return clean;
