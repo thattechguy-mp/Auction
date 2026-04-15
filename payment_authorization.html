@@ -276,7 +276,7 @@
       Phone: (281) 233-0400 | Email: aldine@rightmovestorage.com<br>
       www.rightmovestorage.com<br><br>
       © 2026 Right Move Storage. Form created, developed, and maintained by That Tech Guy.
-      <img class="footer-logo" alt="That Tech Guy" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='40' viewBox='0 0 160 40'><rect rx='8' ry='8' width='160' height='40' fill='%23111827'/><text x='80' y='16' text-anchor='middle' font-family='Arial,Helvetica,sans-serif' font-size='12' fill='%2389F895' font-weight='700'>THAT TECH GUY</text><text x='80' y='29' text-anchor='middle' font-family='Arial,Helvetica,sans-serif' font-size='8' fill='%23ffffff'>WEB • CODE • AUTOMATION</text></svg>">
+      <img class="footer-logo" alt="That Tech Guy" src="https://res.cloudinary.com/mytechguy/image/upload/v1574277803/TTG_Logo_hamnbu.jpg">
     </div>
   </div>
 
@@ -448,6 +448,10 @@
 
     async function sendPayload(payload) {
       showStatus('', '');
+      if (!WEB_APP_URL || WEB_APP_URL.includes('REPLACE_WITH_YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL')) {
+        showStatus('err', 'Replace WEB_APP_URL in the HTML with your deployed Apps Script Web App URL before submitting this form.');
+        return;
+      }
       try {
         const response = await fetch(WEB_APP_URL, {
           method: 'POST',
