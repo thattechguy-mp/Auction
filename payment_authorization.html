@@ -279,6 +279,7 @@
       <img class="footer-logo" alt="That Tech Guy" src="https://res.cloudinary.com/mytechguy/image/upload/v1574277803/TTG_Logo_hamnbu.jpg">
     </div>
   </div>
+  <iframe id="submissionFrame" name="submissionFrame" style="display:none;width:0;height:0;border:0;" tabindex="-1" aria-hidden="true"></iframe>
 
   <div class="modal-backdrop" id="confirmModal">
     <div class="modal">
@@ -318,6 +319,8 @@
     const billingStreetWrap = document.getElementById('billingStreetWrap');
     const poBoxWrap = document.getElementById('poBoxWrap');
     let pendingPayload = null;
+    let submitInProgress = false;
+    let submitTimeoutId = null;
 
     const canvas = document.getElementById('signaturePad');
     const ctx = canvas.getContext('2d');
@@ -381,6 +384,18 @@
       return value.replace(/\D/g, '').slice(0,19).replace(/(.{4})/g, '$1 ').trim();
     }
 
+    function formatPhoneValue(value) {
+      const digits = String(value || '').replace(/\D/g, '').slice(0, 10);
+      if (!digits) return '';
+      if (digits.length < 4) return '(' + digits;
+      if (digits.length < 7) return '(' + digits.slice(0, 3) + ')' + digits.slice(3);
+      return '(' + digits.slice(0, 3) + ')' + digits.slice(3, 6) + '-' + digits.slice(6);
+    }
+
+    function phoneValid(value) {
+      return /^\(\d{3}\)\d{3}-\d{4}$/.test(String(value || ''));
+    }
+
     function updateLastFourFromCard() {
       const digits = cardNumberInput.value.replace(/\D/g, '');
       if (digits.length >= 4) lastFourInput.value = digits.slice(-4);
@@ -423,6 +438,7 @@
       if (!/^\d+(\.\d{2})$/.test(data.amount)) return 'Amount must be entered like 100.00';
       if (!/^\d{4}$/.test(data.lastFour)) return 'Last 4 digits must be exactly 4 numbers.';
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return 'Please enter a valid email address.';
+      if (!phoneValid(data.mobileNumber)) return 'Mobile number must be entered like (281)233-0400.';
       if (!/^\d{5}$/.test(data.unitNumber)) return 'Please select a valid unit number.';
       if (!zipValid(data.physicalZip)) return 'Please enter a valid ZIP for the tenant physical address.';
       if (!zipValid(data.billingZip)) return 'Please enter a valid ZIP for the billing address.';
@@ -446,21 +462,38 @@
       return { x: e.clientX - rect.left, y: e.clientY - rect.top };
     }
 
-    async function sendPayload(payload) {
+    function sendPayload(payload) {
       showStatus('', '');
       if (!WEB_APP_URL || WEB_APP_URL.includes('REPLACE_WITH_YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL')) {
         showStatus('err', 'Replace WEB_APP_URL in the HTML with your deployed Apps Script Web App URL before submitting this form.');
         return;
       }
-      try {
-        const response = await fetch(WEB_APP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const result = await response.json();
-        if (!result.ok) throw new Error(result.error || 'Submission failed.');
-        showStatus('ok', `Request sent successfully. Confirmation ID: ${result.confirmationId}. A PDF copy has been emailed to you.`);
+
+      const iframe = document.getElementById('submissionFrame');
+      const tempForm = document.createElement('form');
+      tempForm.method = 'POST';
+      tempForm.action = WEB_APP_URL;
+      tempForm.target = 'submissionFrame';
+      tempForm.style.display = 'none';
+
+      Object.entries(payload).forEach(function(entry) {
+        const key = entry[0];
+        const value = entry[1];
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value == null ? '' : String(value);
+        tempForm.appendChild(input);
+      });
+
+      submitInProgress = true;
+      showStatus('ok', 'Submitting your request now. Please wait...');
+
+      iframe.onload = function() {
+        if (!submitInProgress) return;
+        submitInProgress = false;
+        window.clearTimeout(submitTimeoutId);
+        showStatus('ok', 'Request submitted successfully. If Apps Script validation passes, PDF copies will be emailed to the office and the customer shortly.');
         form.reset();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         hasSignature = false;
@@ -468,9 +501,19 @@
         updateAuthorizationLabel();
         document.getElementById('noticeDate').valueAsDate = new Date();
         document.getElementById('signatureDate').valueAsDate = new Date();
-      } catch (err) {
-        showStatus('err', err.message || 'Submission failed.');
-      }
+        document.getElementById('mobileNumber').value = '';
+        if (tempForm.parentNode) tempForm.parentNode.removeChild(tempForm);
+      };
+
+      submitTimeoutId = window.setTimeout(function() {
+        if (!submitInProgress) return;
+        submitInProgress = false;
+        showStatus('err', 'Submission timed out. Verify the Apps Script web app is deployed and accessible to Anyone, then try again.');
+        if (tempForm.parentNode) tempForm.parentNode.removeChild(tempForm);
+      }, 20000);
+
+      document.body.appendChild(tempForm);
+      tempForm.submit();
     }
 
     form.addEventListener('submit', function(e) {
@@ -498,6 +541,8 @@
       if (e.target === modal) { pendingPayload = null; modal.style.display = 'none'; }
     });
 
+    document.getElementById('mobileNumber').addEventListener('input', function() { this.value = formatPhoneValue(this.value); });
+    document.getElementById('mobileNumber').addEventListener('blur', function() { this.value = formatPhoneValue(this.value); });
     amountInput.addEventListener('input', function() { this.value = formatAmountValue(this.value); updateAuthorizationLabel(); });
     amountInput.addEventListener('blur', function() { this.value = normalizeAmountForDisplay(this.value); updateAuthorizationLabel(); });
     lastFourInput.addEventListener('input', function() { this.value = this.value.replace(/\D/g, '').slice(0,4); updateAuthorizationLabel(); });
@@ -531,6 +576,15 @@
     updateAuthorizationLabel();
     document.getElementById('noticeDate').valueAsDate = new Date();
     document.getElementById('signatureDate').valueAsDate = new Date();
+    form.addEventListener('reset', function() {
+      window.setTimeout(function() {
+        showStatus('', '');
+        togglePoBox();
+        updateAuthorizationLabel();
+        document.getElementById('mobileNumber').value = '';
+      }, 0);
+    });
+
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
   </script>
