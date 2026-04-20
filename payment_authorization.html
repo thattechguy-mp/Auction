@@ -166,7 +166,7 @@
             <div class="full">
               <div class="check-row">
                 <input id="billingIsPoBox" name="billingIsPoBox" type="checkbox" value="Yes">
-                <label for="billingIsPoBox">My billing address is a PO BOX.</label>
+                <label for="billingIsPoBox">My billing address is a PO Box.</label>
               </div>
             </div>
 
@@ -263,6 +263,8 @@
           </div>
         </form>
 
+        <input type="hidden" id="surchargeAmount" name="surchargeAmount">
+        <input type="hidden" id="totalAmount" name="totalAmount">
         <div id="status" class="status"></div>
       </div>
 
@@ -373,6 +375,19 @@
       return clean;
     }
 
+    function surchargeAmountValue(amount) {
+      const n = Number(String(amount || '').replace(/[^\d.]/g, ''));
+      if (!isFinite(n) || n <= 0) return '0.00';
+      return (n * 0.03).toFixed(2);
+    }
+
+    function totalWithSurchargeValue(amount) {
+      const n = Number(String(amount || '').replace(/[^\d.]/g, ''));
+      if (!isFinite(n) || n <= 0) return '0.00';
+      return (n * 1.03).toFixed(2);
+    }
+
+
     function normalizeAmountForDisplay(value) {
       const clean = formatAmountValue(value);
       if (!clean) return '0.00';
@@ -424,6 +439,8 @@
     function collectPayload() {
       const fd = new FormData(form);
       const payload = Object.fromEntries(fd.entries());
+      payload.surchargeAmount = surchargeAmountValue(amountInput ? amountInput.value : '0');
+      payload.totalAmount = totalWithSurchargeValue(amountInput ? amountInput.value : '0');
       payload.drawnSignature = hasSignature ? canvas.toDataURL('image/png') : '';
       payload.billingAddressType = billingIsPoBox.checked ? 'PO Box' : 'Street';
       payload.cardNumberClean = (payload.cardNumber || '').replace(/\D/g, '');
