@@ -418,12 +418,17 @@
     }
 
     function updateAuthorizationLabel() {
-      const brand = cardBrandInput.value || 'card';
-      const last4 = /^\d{4}$/.test(lastFourInput.value) ? lastFourInput.value : '****';
-      const amount = normalizeAmountForDisplay(amountInput.value);
-      cardAuthorizationLabel.textContent = `I authorize Aldine Storage to process a payment with the ${brand} entered above, ending in ${last4}, in the amount of $${amount}.`;
+      const brand = cardBrandInput ? (cardBrandInput.value || 'card') : 'card';
+      const lastFour = (lastFourInput && /^\d{4}$/.test(lastFourInput.value)) ? lastFourInput.value : '****';
+      const amount = amountInput ? formatAmountValue(amountInput.value || '0') : '0.00';
+      const surcharge = surchargeAmountValue(amount);
+      const totalAmount = totalWithSurchargeValue(amount);
+      const surchargeField = document.getElementById('surchargeAmount');
+      const totalField = document.getElementById('totalAmount');
+      if (surchargeField) surchargeField.value = surcharge;
+      if (totalField) totalField.value = totalAmount;
+      authorizationLabel.textContent = `I authorize Aldine Storage to process a payment with the ${brand} entered above, ending in ${lastFour}, in the amount of $${totalAmount}, which includes the 3% surcharge amount of $${surcharge}.`;
     }
-
     function togglePoBox() {
       const isPo = billingIsPoBox.checked;
       billingStreetWrap.classList.toggle('hidden', isPo);
