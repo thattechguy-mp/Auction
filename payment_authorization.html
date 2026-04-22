@@ -298,64 +298,36 @@
     </div>
   </div>
 
-  <script>
+  
+<script>
     const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwjH4ayoS0_RPRtXCQEXqpmAukXZ1kzkxk6xAokY38q1bAxPhWpWdovj8xSSLAu_VU2/exec';
-    const UNAVAILABLE_UNITS = ['00143','00144','00145','00199','00258','00309','00320','00357','00378','00556'];
-    const STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
-    const unitSelect = document.getElementById('unitNumber');
+
     const form = document.getElementById('paymentForm');
     const statusBox = document.getElementById('status');
     const modal = document.getElementById('confirmModal');
     const cancelSend = document.getElementById('cancelSend');
     const confirmSend = document.getElementById('confirmSend');
     const amountInput = document.getElementById('amount');
-    const lastFourInput = document.getElementById('lastFour');
     const cardBrandInput = document.getElementById('cardBrand');
     const cardNumberInput = document.getElementById('cardNumber');
     const expInput = document.getElementById('expirationDate');
     const cvvInput = document.getElementById('cvv');
-    const cardAuthorizationLabel = document.getElementById('cardAuthorizationLabel');
+    const lastFourInput = document.getElementById('lastFour');
+    const authorizationLabel = document.getElementById('cardAuthorizationLabel');
     const billingIsPoBox = document.getElementById('billingIsPoBox');
-    const billingStreet = document.getElementById('billingStreet');
-    const poBoxNumber = document.getElementById('poBoxNumber');
     const billingStreetWrap = document.getElementById('billingStreetWrap');
     const poBoxWrap = document.getElementById('poBoxWrap');
-    let pendingPayload = null;
-    let submitInProgress = false;
-    let submitTimeoutId = null;
+    const billingStreetInput = document.getElementById('billingStreet');
+    const poBoxNumberInput = document.getElementById('poBoxNumber');
+    const surchargeField = document.getElementById('surchargeAmount');
+    const totalField = document.getElementById('totalAmount');
 
     const canvas = document.getElementById('signaturePad');
     const ctx = canvas.getContext('2d');
     let drawing = false;
     let hasSignature = false;
-
-    function resizeCanvas() {
-      const ratio = Math.max(window.devicePixelRatio || 1, 1);
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * ratio;
-      canvas.height = rect.height * ratio;
-      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-      ctx.lineWidth = 2;
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = '#111827';
-      if (!hasSignature) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-
-    function buildOptions(select, placeholder) {
-      let html = `<option value="">${placeholder}</option>`;
-      STATES.forEach(state => html += `<option value="${state}">${state}</option>`);
-      select.innerHTML = html;
-    }
-
-    function buildUnitOptions() {
-      let html = '<option value="">Select your unit</option>';
-      for (let i = 1; i <= 622; i++) {
-        const value = String(i).padStart(5, '0');
-        if (UNAVAILABLE_UNITS.includes(value)) continue;
-        html += `<option value="${value}">${value}</option>`;
-      }
-      unitSelect.innerHTML = html;
-    }
+    let pendingSubmit = false;
+    let submitTimeoutId = null;
 
     function showStatus(type, msg) {
       if (!msg) {
@@ -367,12 +339,16 @@
       statusBox.textContent = msg;
     }
 
+    function digitsOnly(value) {
+      return String(value || '').replace(/\D/g, '');
+    }
+
     function formatAmountValue(value) {
-      let clean = String(value || '').replace(/[^\d.]/g, '');
-      const parts = clean.split('.');
-      if (parts.length > 2) clean = parts[0] + '.' + parts.slice(1).join('');
-      if (parts.length >= 2) clean = parts[0] + '.' + parts[1].slice(0, 2);
-      return clean;
+      const cleaned = String(value || '').replace(/[^\d.]/g, '');
+      if (!cleaned) return '0.00';
+      const n = Number(cleaned);
+      if (!isFinite(n) || n < 0) return '0.00';
+      return n.toFixed(2);
     }
 
     function surchargeAmountValue(amount) {
@@ -387,34 +363,36 @@
       return (n * 1.03).toFixed(2);
     }
 
-
-    function normalizeAmountForDisplay(value) {
-      const clean = formatAmountValue(value);
-      if (!clean) return '0.00';
-      const num = Number(clean);
-      return Number.isFinite(num) ? num.toFixed(2) : '0.00';
-    }
-
-    function formatCardNumber(value) {
-      return value.replace(/\D/g, '').slice(0,19).replace(/(.{4})/g, '$1 ').trim();
-    }
-
     function formatPhoneValue(value) {
-      const digits = String(value || '').replace(/\D/g, '').slice(0, 10);
+      const digits = digitsOnly(value).slice(0, 10);
       if (!digits) return '';
       if (digits.length < 4) return '(' + digits;
-      if (digits.length < 7) return '(' + digits.slice(0, 3) + ')' + digits.slice(3);
-      return '(' + digits.slice(0, 3) + ')' + digits.slice(3, 6) + '-' + digits.slice(6);
+      if (digits.length < 7) return '(' + digits.slice(0,3) + ')' + digits.slice(3);
+      return '(' + digits.slice(0,3) + ')' + digits.slice(3,6) + '-' + digits.slice(6);
     }
 
     function phoneValid(value) {
       return /^\(\d{3}\)\d{3}-\d{4}$/.test(String(value || ''));
     }
 
-    function updateLastFourFromCard() {
-      const digits = cardNumberInput.value.replace(/\D/g, '');
-      if (digits.length >= 4) lastFourInput.value = digits.slice(-4);
-      updateAuthorizationLabel();
+    function zipValid(value) {
+      return /^\d{5}(?:-\d{4})?$/.test(String(value || ''));
+    }
+
+    function upperTwo(el) {
+      el.addEventListener('input', function() {
+        this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 2);
+      });
+    }
+
+    function formatCardNumber(value) {
+      const digits = digitsOnly(value).slice(0, 19);
+      return digits.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+    }
+
+    function updateLastFour() {
+      const digits = digitsOnly(cardNumberInput.value);
+      lastFourInput.value = digits.length >= 4 ? digits.slice(-4) : '';
     }
 
     function updateAuthorizationLabel() {
@@ -423,71 +401,113 @@
       const amount = amountInput ? formatAmountValue(amountInput.value || '0') : '0.00';
       const surcharge = surchargeAmountValue(amount);
       const totalAmount = totalWithSurchargeValue(amount);
-      const surchargeField = document.getElementById('surchargeAmount');
-      const totalField = document.getElementById('totalAmount');
       if (surchargeField) surchargeField.value = surcharge;
       if (totalField) totalField.value = totalAmount;
       authorizationLabel.textContent = `I authorize Aldine Storage to process a payment with the ${brand} entered above, ending in ${lastFour}, in the amount of $${totalAmount}, which includes the 3% surcharge amount of $${surcharge}.`;
     }
-    function togglePoBox() {
+
+    function syncSignatureField() {
+      const hidden = document.getElementById('drawnSignature');
+      hidden.value = hasSignature ? canvas.toDataURL('image/png') : '';
+    }
+
+    function toggleBillingAddressMode() {
+      const isPo = !!billingIsPoBox.checked;
+      billingStreetWrap.style.display = isPo ? 'none' : '';
+      poBoxWrap.style.display = isPo ? '' : 'none';
+      billingStreetInput.required = !isPo;
+      poBoxNumberInput.required = isPo;
+    }
+
+    function resizeCanvas() {
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * ratio;
+      canvas.height = rect.height * ratio;
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#111827';
+      if (!hasSignature) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function startDraw(x, y) {
+      drawing = true;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    }
+
+    function draw(x, y) {
+      if (!drawing) return;
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      hasSignature = true;
+    }
+
+    function endDraw() {
+      drawing = false;
+    }
+
+    function pointFromEvent(e) {
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches && e.touches[0]) {
+        return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+      }
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    function validateClient() {
+      syncSignatureField();
+
+      if (!document.getElementById('fullName').value.trim()) return 'Full name is required.';
+      if (!document.getElementById('email').value.trim()) return 'Email address is required.';
+      if (!phoneValid(document.getElementById('mobileNumber').value)) return 'Mobile number must be entered like (281)233-0400.';
+      if (!/^\d{5}$/.test(document.getElementById('unitNumber').value || '')) return 'Please select a valid unit number.';
+      if (!document.getElementById('physicalStreet').value.trim()) return 'Tenant physical street address is required.';
+      if (!document.getElementById('physicalCity').value.trim()) return 'City is required.';
+      if (!/^[A-Z]{2}$/.test(document.getElementById('physicalState').value || '')) return 'Physical address state must be two letters.';
+      if (!zipValid(document.getElementById('physicalZip').value || '')) return 'Physical ZIP must be valid.';
+      if (!/^\d+\.\d{2}$/.test(formatAmountValue(amountInput.value))) return 'Amount is invalid.';
+      if (!document.getElementById('cardholderName').value.trim()) return 'Cardholder name is required.';
+      if (!cardBrandInput.value) return 'Card brand is required.';
+      if (!/^\d{13,19}$/.test(digitsOnly(cardNumberInput.value))) return 'Please enter a valid card number.';
+      if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expInput.value || '')) return 'Expiration date must be in MM/YY format.';
+      if (!/^\d{3,4}$/.test(cvvInput.value || '')) return 'CVV must be 3 or 4 digits.';
+      if (!/^\d{4}$/.test(lastFourInput.value || '')) return 'Last 4 digits are required.';
+
       const isPo = billingIsPoBox.checked;
-      billingStreetWrap.classList.toggle('hidden', isPo);
-      poBoxWrap.classList.toggle('hidden', !isPo);
-      billingStreet.required = !isPo;
-      poBoxNumber.required = isPo;
-      if (isPo) billingStreet.value = ''; else poBoxNumber.value = '';
-    }
-
-    function zipValid(value) { return /^\d{5}(?:-\d{4})?$/.test(value); }
-    function expValid(value) { return /^(0[1-9]|1[0-2])\/\d{2}$/.test(value); }
-
-    function collectPayload() {
-      const fd = new FormData(form);
-      const payload = Object.fromEntries(fd.entries());
-      payload.surchargeAmount = surchargeAmountValue(amountInput ? amountInput.value : '0');
-      payload.totalAmount = totalWithSurchargeValue(amountInput ? amountInput.value : '0');
-      payload.drawnSignature = hasSignature ? canvas.toDataURL('image/png') : '';
-      payload.billingAddressType = billingIsPoBox.checked ? 'PO Box' : 'Street';
-      payload.cardNumberClean = (payload.cardNumber || '').replace(/\D/g, '');
-      payload.billingAddressFull = billingIsPoBox.checked
-        ? `PO BOX ${poBoxNumber.value.trim()}, ${payload.billingCity}, ${payload.billingState} ${payload.billingZip}`
-        : `${payload.billingStreet}, ${payload.billingCity}, ${payload.billingState} ${payload.billingZip}`;
-      payload.tenantPhysicalAddressFull = `${payload.physicalStreet}, ${payload.physicalCity}, ${payload.physicalState} ${payload.physicalZip}`;
-      return payload;
-    }
-
-    function validateClient(data) {
-      if (!/^\d+(\.\d{2})$/.test(data.amount)) return 'Amount must be entered like 100.00';
-      if (!/^\d{4}$/.test(data.lastFour)) return 'Last 4 digits must be exactly 4 numbers.';
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return 'Please enter a valid email address.';
-      if (!phoneValid(data.mobileNumber)) return 'Mobile number must be entered like (281)233-0400.';
-      if (!/^\d{5}$/.test(data.unitNumber)) return 'Please select a valid unit number.';
-      if (!zipValid(data.physicalZip)) return 'Please enter a valid ZIP for the tenant physical address.';
-      if (!zipValid(data.billingZip)) return 'Please enter a valid ZIP for the billing address.';
-      if (!STATES.includes(data.physicalState)) return 'Please select a valid physical address state.';
-      if (!STATES.includes(data.billingState)) return 'Please select a valid billing address state.';
-      if (!data.drawnSignature) return 'Please draw your signature before submitting.';
-      if (!/^\d{13,19}$/.test(data.cardNumberClean)) return 'Please enter a valid card number.';
-      if (!expValid(data.expirationDate)) return 'Expiration date must be in MM/YY format.';
-      if (!/^\d{3,4}$/.test(data.cvv)) return 'CVV must be 3 or 4 digits.';
-      if (billingIsPoBox.checked && !/^\d+[A-Za-z0-9-]*$/.test((data.poBoxNumber || '').trim())) return 'Please enter a valid PO Box number.';
-      if (!billingIsPoBox.checked && !(data.billingStreet || '').trim()) return 'Please enter the billing street address.';
+      if (isPo) {
+        if (!poBoxNumberInput.value.trim()) return 'PO Box number is required.';
+      } else {
+        if (!billingStreetInput.value.trim()) return 'Billing street address is required.';
+      }
+      if (!document.getElementById('billingCity').value.trim()) return 'Billing city is required.';
+      if (!/^[A-Z]{2}$/.test(document.getElementById('billingState').value || '')) return 'Billing state must be two letters.';
+      if (!zipValid(document.getElementById('billingZip').value || '')) return 'Billing ZIP must be valid.';
+      if (!document.getElementById('preferredCallback').value) return 'Preferred call back window is required.';
+      if (!document.getElementById('noticeDate').value) return 'Notice date is required.';
+      if (!document.getElementById('signature').value.trim()) return 'Type full legal name is required.';
+      if (!document.getElementById('signatureDate').value) return 'Signature date is required.';
+      if (!document.getElementById('readyAuthorization').checked) return 'You must confirm you are ready to make a payment.';
+      if (!document.getElementById('cardAuthorization').checked) return 'You must authorize the card payment.';
+      if (!document.getElementById('drawnSignature').value || !hasSignature) return 'Drawn signature is required.';
       return '';
     }
 
-    function startDraw(x, y) { drawing = true; ctx.beginPath(); ctx.moveTo(x, y); }
-    function draw(x, y) { if (!drawing) return; ctx.lineTo(x, y); ctx.stroke(); hasSignature = true; }
-    function endDraw() { drawing = false; }
-    function pointFromEvent(e) {
-      const rect = canvas.getBoundingClientRect();
-      if (e.touches && e.touches[0]) return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
-      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    function collectPayload() {
+      syncSignatureField();
+      const fd = new FormData(form);
+      const payload = Object.fromEntries(fd.entries());
+      payload.amount = formatAmountValue(amountInput ? amountInput.value : '0');
+      payload.surchargeAmount = surchargeAmountValue(payload.amount);
+      payload.totalAmount = totalWithSurchargeValue(payload.amount);
+      return payload;
     }
 
     function sendPayload(payload) {
       showStatus('', '');
       if (!WEB_APP_URL || WEB_APP_URL.includes('REPLACE_WITH_YOUR_DEPLOYED_APPS_SCRIPT_WEB_APP_URL')) {
-        showStatus('err', 'Replace WEB_APP_URL in the HTML with your deployed Apps Script Web App URL before submitting this form.');
+        showStatus('err', 'Replace WEB_APP_URL in the HTML with your deployed Apps Script Web App URL before using this form.');
         return;
       }
 
@@ -499,116 +519,182 @@
       tempForm.style.display = 'none';
 
       Object.entries(payload).forEach(function(entry) {
-        const key = entry[0];
-        const value = entry[1];
         const input = document.createElement('input');
         input.type = 'hidden';
-        input.name = key;
-        input.value = value == null ? '' : String(value);
+        input.name = entry[0];
+        input.value = entry[1] == null ? '' : String(entry[1]);
         tempForm.appendChild(input);
       });
 
-      submitInProgress = true;
+      pendingSubmit = true;
       showStatus('ok', 'Submitting your request now. Please wait...');
+      document.body.appendChild(tempForm);
+      tempForm.submit();
 
       iframe.onload = function() {
-        if (!submitInProgress) return;
-        submitInProgress = false;
+        if (!pendingSubmit) return;
+        pendingSubmit = false;
         window.clearTimeout(submitTimeoutId);
-        showStatus('ok', 'Request submitted successfully. If Apps Script validation passes, PDF copies will be emailed to the office and the customer shortly.');
+        showStatus('ok', 'Request submitted successfully.');
         form.reset();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         hasSignature = false;
-        togglePoBox();
-        updateAuthorizationLabel();
         document.getElementById('noticeDate').valueAsDate = new Date();
         document.getElementById('signatureDate').valueAsDate = new Date();
-        document.getElementById('mobileNumber').value = '';
+        toggleBillingAddressMode();
+        updateLastFour();
+        updateAuthorizationLabel();
         if (tempForm.parentNode) tempForm.parentNode.removeChild(tempForm);
       };
 
       submitTimeoutId = window.setTimeout(function() {
-        if (!submitInProgress) return;
-        submitInProgress = false;
+        if (!pendingSubmit) return;
+        pendingSubmit = false;
         showStatus('err', 'Submission timed out. Verify the Apps Script web app is deployed and accessible to Anyone, then try again.');
         if (tempForm.parentNode) tempForm.parentNode.removeChild(tempForm);
-      }, 20000);
-
-      document.body.appendChild(tempForm);
-      tempForm.submit();
+      }, 30000);
     }
 
     form.addEventListener('submit', function(e) {
       e.preventDefault();
-      const payload = collectPayload();
-      const issue = validateClient(payload);
-      if (issue) { showStatus('err', issue); return; }
-      pendingPayload = payload;
+      const issue = validateClient();
+      if (issue) {
+        showStatus('err', issue);
+        return;
+      }
       modal.style.display = 'flex';
     });
 
     cancelSend.addEventListener('click', function() {
-      pendingPayload = null;
       modal.style.display = 'none';
-      showStatus('err', 'Submission cancelled. Send the request only when you are ready to make a payment.');
+      showStatus('err', 'Submission cancelled.');
     });
 
     confirmSend.addEventListener('click', function() {
       modal.style.display = 'none';
-      if (pendingPayload) sendPayload(pendingPayload);
-      pendingPayload = null;
+      try {
+        const payload = collectPayload();
+        sendPayload(payload);
+      } catch (err) {
+        showStatus('err', err && err.message ? err.message : 'Unable to prepare submission.');
+      }
     });
 
     window.addEventListener('click', function(e) {
-      if (e.target === modal) { pendingPayload = null; modal.style.display = 'none'; }
+      if (e.target === modal) modal.style.display = 'none';
     });
 
-    document.getElementById('mobileNumber').addEventListener('input', function() { this.value = formatPhoneValue(this.value); });
-    document.getElementById('mobileNumber').addEventListener('blur', function() { this.value = formatPhoneValue(this.value); });
-    amountInput.addEventListener('input', function() { this.value = formatAmountValue(this.value); updateAuthorizationLabel(); });
-    amountInput.addEventListener('blur', function() { this.value = normalizeAmountForDisplay(this.value); updateAuthorizationLabel(); });
-    lastFourInput.addEventListener('input', function() { this.value = this.value.replace(/\D/g, '').slice(0,4); updateAuthorizationLabel(); });
+    document.getElementById('mobileNumber').addEventListener('input', function() {
+      this.value = formatPhoneValue(this.value);
+    });
+    document.getElementById('mobileNumber').addEventListener('blur', function() {
+      this.value = formatPhoneValue(this.value);
+    });
+
+    ['physicalState', 'billingState'].forEach(function(id) {
+      upperTwo(document.getElementById(id));
+    });
+
+    document.getElementById('physicalZip').addEventListener('input', function() {
+      this.value = this.value.replace(/[^\d-]/g, '').slice(0, 10);
+    });
+    document.getElementById('billingZip').addEventListener('input', function() {
+      this.value = this.value.replace(/[^\d-]/g, '').slice(0, 10);
+    });
+
+    amountInput.addEventListener('input', updateAuthorizationLabel);
+    amountInput.addEventListener('blur', function() {
+      this.value = formatAmountValue(this.value);
+      updateAuthorizationLabel();
+    });
+
     cardBrandInput.addEventListener('change', updateAuthorizationLabel);
-    billingIsPoBox.addEventListener('change', togglePoBox);
-    cardNumberInput.addEventListener('input', function() { this.value = formatCardNumber(this.value); updateLastFourFromCard(); });
-    expInput.addEventListener('input', function(){
-      let v = this.value.replace(/\D/g,'').slice(0,4);
-      if (v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
-      this.value = v;
+
+    cardNumberInput.addEventListener('input', function() {
+      this.value = formatCardNumber(this.value);
+      updateLastFour();
+      updateAuthorizationLabel();
     });
-    cvvInput.addEventListener('input', function(){ this.value = this.value.replace(/\D/g,'').slice(0,4); });
 
-    document.getElementById('physicalZip').addEventListener('input', function(){ this.value = this.value.replace(/[^\d-]/g, '').slice(0,10); });
-    document.getElementById('billingZip').addEventListener('input', function(){ this.value = this.value.replace(/[^\d-]/g, '').slice(0,10); });
-    document.getElementById('poBoxNumber').addEventListener('input', function(){ this.value = this.value.replace(/[^\w-]/g, ''); });
-    document.getElementById('clearSignature').addEventListener('click', function(){ ctx.clearRect(0, 0, canvas.width, canvas.height); hasSignature = false; });
+    expInput.addEventListener('input', function() {
+      const digits = digitsOnly(this.value).slice(0, 4);
+      if (digits.length >= 3) {
+        this.value = digits.slice(0, 2) + '/' + digits.slice(2);
+      } else {
+        this.value = digits;
+      }
+    });
 
-    canvas.addEventListener('mousedown', function(e){ const p = pointFromEvent(e); startDraw(p.x,p.y); });
-    canvas.addEventListener('mousemove', function(e){ const p = pointFromEvent(e); draw(p.x,p.y); });
-    window.addEventListener('mouseup', endDraw);
-    canvas.addEventListener('mouseleave', endDraw);
-    canvas.addEventListener('touchstart', function(e){ e.preventDefault(); const p = pointFromEvent(e); startDraw(p.x,p.y); }, {passive:false});
-    canvas.addEventListener('touchmove', function(e){ e.preventDefault(); const p = pointFromEvent(e); draw(p.x,p.y); }, {passive:false});
-    canvas.addEventListener('touchend', function(e){ e.preventDefault(); endDraw(); }, {passive:false});
+    cvvInput.addEventListener('input', function() {
+      this.value = digitsOnly(this.value).slice(0, 4);
+    });
 
-    buildUnitOptions();
-    buildOptions(document.getElementById('physicalState'), 'State');
-    buildOptions(document.getElementById('billingState'), 'State');
-    togglePoBox();
-    updateAuthorizationLabel();
-    document.getElementById('noticeDate').valueAsDate = new Date();
-    document.getElementById('signatureDate').valueAsDate = new Date();
+    billingIsPoBox.addEventListener('change', toggleBillingAddressMode);
+
+    document.getElementById('clearSignature').addEventListener('click', function() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      hasSignature = false;
+      syncSignatureField();
+    });
+
+    canvas.addEventListener('mousedown', function(e) {
+      const p = pointFromEvent(e);
+      startDraw(p.x, p.y);
+    });
+    canvas.addEventListener('mousemove', function(e) {
+      const p = pointFromEvent(e);
+      draw(p.x, p.y);
+      syncSignatureField();
+    });
+    window.addEventListener('mouseup', function() {
+      endDraw();
+      syncSignatureField();
+    });
+    canvas.addEventListener('mouseleave', function() {
+      endDraw();
+      syncSignatureField();
+    });
+
+    canvas.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      const p = pointFromEvent(e);
+      startDraw(p.x, p.y);
+    }, { passive: false });
+    canvas.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      const p = pointFromEvent(e);
+      draw(p.x, p.y);
+      syncSignatureField();
+    }, { passive: false });
+    canvas.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      endDraw();
+      syncSignatureField();
+    }, { passive: false });
+
     form.addEventListener('reset', function() {
       window.setTimeout(function() {
         showStatus('', '');
-        togglePoBox();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        hasSignature = false;
+        document.getElementById('noticeDate').valueAsDate = new Date();
+        document.getElementById('signatureDate').valueAsDate = new Date();
+        toggleBillingAddressMode();
+        updateLastFour();
         updateAuthorizationLabel();
-        document.getElementById('mobileNumber').value = '';
+        syncSignatureField();
       }, 0);
     });
 
     window.addEventListener('resize', resizeCanvas);
+    document.getElementById('noticeDate').valueAsDate = new Date();
+    document.getElementById('signatureDate').valueAsDate = new Date();
+    toggleBillingAddressMode();
     resizeCanvas();
-  </script>
+    updateLastFour();
+    updateAuthorizationLabel();
+    syncSignatureField();
+</script>
+
 </body>
 </html>
